@@ -28,3 +28,6 @@
 # Crash / perfis
 sysinfo.txt
 *.stackdump
+
+# build de teste de Mac (não versionar)
+build-mac/

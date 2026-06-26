@@ -27,5 +27,23 @@ public static class BuildTool {
         else
             Debug.LogError("BUILD_FALHOU resultado=" + s2.result + " erros=" + s2.totalErrors);
     }
+
+    // build de Mac — usado só pra TESTAR a build standalone neste computador (não vai pro repo)
+    public static void BuildMac() {
+        var scenes = new List<string>();
+        foreach (var s in EditorBuildSettings.scenes) if (s.enabled) scenes.Add(s.path);
+        var opt = new BuildPlayerOptions {
+            scenes = scenes.ToArray(),
+            locationPathName = "build-mac/MercadoFinal.app",
+            target = BuildTarget.StandaloneOSX,
+            options = BuildOptions.None
+        };
+        var report = BuildPipeline.BuildPlayer(opt);
+        var s2 = report.summary;
+        if (s2.result == BuildResult.Succeeded)
+            Debug.Log("BUILD_OK_MAC saida=build-mac/MercadoFinal.app");
+        else
+            Debug.LogError("BUILD_FALHOU_MAC resultado=" + s2.result + " erros=" + s2.totalErrors);
+    }
 }
 #endif
