@@ -1,0 +1,32 @@
+# Unity — pastas geradas automaticamente (não precisam ir pro backup)
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+[Uu]ser[Ss]ettings/
+.vs/
+
+# Arquivos de projeto de IDE gerados
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# macOS
+.DS_Store
+
+# Crash / perfis
+sysinfo.txt
+*.stackdump
