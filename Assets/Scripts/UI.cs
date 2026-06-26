@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using System.Collections.Generic;
 
 // UI.cs — interface DO NÍVEL (uGUI por código): HUD (dinheiro/meta/nível/reputação/tempo) +
@@ -30,6 +31,12 @@ public class UI : MonoBehaviour {
         canvas = cgo.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         var sc = cgo.AddComponent<CanvasScaler>(); sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; sc.referenceResolution = new Vector2(1280, 720); sc.matchWidthOrHeight = 0.5f;
         cgo.AddComponent<GraphicRaycaster>();
+        // EventSystem é OBRIGATÓRIO pros cliques de UI (botões de evento/compra/relatório)
+        if (FindObjectOfType<EventSystem>() == null) {
+            var es = new GameObject("EventSystem");
+            es.AddComponent<EventSystem>();
+            es.AddComponent<StandaloneInputModule>();
+        }
         BuildHUD(); BuildDayEnd(); BuildLevelClear(); BuildEvent(); BuildBuy();
         dayendRoot.SetActive(false); levelRoot.SetActive(false); eventRoot.SetActive(false); buyRoot.SetActive(false);
     }
