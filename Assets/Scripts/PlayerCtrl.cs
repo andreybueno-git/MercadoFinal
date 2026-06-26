@@ -38,7 +38,7 @@ public class PlayerCtrl : MonoBehaviour {
     }
 
     void Update() {
-        if (!active || GameManager.I.screen != Screen.Playing || GameManager.I.pendingEvent != null || (UI.I != null && UI.I.modal)) return;
+        if (!active || GameManager.I == null || !GameManager.I.running || GameManager.I.pendingEvent != null || (UI.I != null && UI.I.modal)) return;
         float mx = Input.GetAxisRaw("Horizontal");
         float my = Input.GetAxisRaw("Vertical");
         var v = new Vector2(mx, my); if (v.sqrMagnitude > 1f) v.Normalize();

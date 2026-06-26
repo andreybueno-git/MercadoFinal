@@ -2,17 +2,19 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 
-// UI.cs — TODA a interface construída por código (uGUI): HUD + telas (menu/fim-de-dia/
-// gameover/vitória) + diálogo de evento moral + painel de compra + toasts + textos flutuantes.
+// UI.cs — interface DO NÍVEL (uGUI por código): HUD (dinheiro/meta/nível/reputação/tempo) +
+// relatório de fim de dia + tela "nível concluído" + diálogo de evento moral + painel de
+// compra + toasts + textos flutuantes. As telas Menu/ComoJogar/Fim são cenas separadas.
 public class UI : MonoBehaviour {
     public static UI I;
-    public bool modal = false;        // diálogo aberto → pausa o jogo
+    public bool modal = false;        // diálogo (evento/compra) aberto → pausa o jogo
 
     Canvas canvas; Font font;
-    GameObject hudRoot, menuRoot, tutoRoot, dayendRoot, gameoverRoot, victoryRoot, eventRoot, buyRoot;
-    Text tMoney, tRep, tDay, tTime, tCust, tHint, tToast, tDayReport, tGOstats, tVICstats, tEventTitle, tEventText;
+    GameObject hudRoot, dayendRoot, levelRoot, eventRoot, buyRoot;
+    Text tMoney, tMeta, tDay, tCust, tDayReport, tLevelReport, tEventTitle, tEventText, tToast;
     Image repBar, timeBar;
     Transform eventOpts, buyList; Text buySupplier; int buySupIdx = 0;
+    System.Action onNivelNext;
     float toastT = 0f;
     List<RectTransform> floats = new List<RectTransform>();
 
@@ -28,8 +30,8 @@ public class UI : MonoBehaviour {
         canvas = cgo.AddComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         var sc = cgo.AddComponent<CanvasScaler>(); sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; sc.referenceResolution = new Vector2(1280, 720); sc.matchWidthOrHeight = 0.5f;
         cgo.AddComponent<GraphicRaycaster>();
-        BuildHUD(); BuildMenu(); BuildTutorial(); BuildDayEnd(); BuildGameOver(); BuildVictory(); BuildEvent(); BuildBuy();
-        OnScreen(Screen.Menu);
+        BuildHUD(); BuildDayEnd(); BuildLevelClear(); BuildEvent(); BuildBuy();
+        dayendRoot.SetActive(false); levelRoot.SetActive(false); eventRoot.SetActive(false); buyRoot.SetActive(false);
     }
 
     // ---------- helpers ----------
@@ -43,16 +45,21 @@ public class UI : MonoBehaviour {
         rt.anchorMin = aMin; rt.anchorMax = aMax; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
         var t = go.AddComponent<Text>(); t.font = font; t.text = s; t.fontSize = size; t.color = col; t.alignment = anchor;
         t.horizontalOverflow = HorizontalWrapMode.Wrap; t.verticalOverflow = VerticalWrapMode.Overflow; t.fontStyle = FontStyle.Bold;
-        t.raycastTarget = false; // não bloquear cliques dos botões por baixo
+        t.raycastTarget = false;
         return t;
     }
     Button Btn(Transform parent, string s, Vector2 aMin, Vector2 aMax, Color col, System.Action onClick) {
         var go = new GameObject("btn"); var rt = go.AddComponent<RectTransform>(); rt.SetParent(parent, false);
         rt.anchorMin = aMin; rt.anchorMax = aMax; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
         var im = go.AddComponent<Image>(); im.color = col;
-        var b = go.AddComponent<Button>(); b.onClick.AddListener(() => { onClick?.Invoke(); AudioManager.I.Sfx(AssetDB.I.sfxDing); });
-        var t = Label(rt, s, 26, GameConfig.Ink, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one);
+        var b = go.AddComponent<Button>(); b.onClick.AddListener(() => { if (AudioManager.I != null && AssetDB.I != null) AudioManager.I.Sfx(AssetDB.I.sfxDing); onClick?.Invoke(); });
+        Label(rt, s, 26, GameConfig.Ink, TextAnchor.MiddleCenter, Vector2.zero, Vector2.one);
         return b;
+    }
+    RectTransform FullPanel(string name, Color col) {
+        var go = new GameObject(name); var rt = go.AddComponent<RectTransform>(); rt.SetParent(canvas.transform, false);
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+        go.AddComponent<Image>().color = col; return rt;
     }
 
     // ---------- HUD ----------
@@ -60,80 +67,58 @@ public class UI : MonoBehaviour {
         hudRoot = new GameObject("HUD"); var rt = hudRoot.AddComponent<RectTransform>(); rt.SetParent(canvas.transform, false);
         rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
         var bar = Panel(rt, new Vector2(0, 0.92f), new Vector2(1, 1f), new Color(0.13f, 0.10f, 0.08f, 0.85f));
-        tMoney = Label(bar, "R$ 0", 30, GameConfig.Gold, TextAnchor.MiddleLeft, new Vector2(0.01f, 0), new Vector2(0.22f, 1));
-        tDay   = Label(bar, "Dia 1", 24, GameConfig.Paper, TextAnchor.MiddleCenter, new Vector2(0.22f, 0), new Vector2(0.38f, 1));
-        Label(bar, "Reputação", 16, GameConfig.Paper, TextAnchor.MiddleLeft, new Vector2(0.40f, 0.55f), new Vector2(0.62f, 1));
-        var repBg = Panel(bar, new Vector2(0.40f, 0.18f), new Vector2(0.62f, 0.5f), new Color(0, 0, 0, 0.4f));
+        tMoney = Label(bar, "R$ 0", 28, GameConfig.Gold, TextAnchor.MiddleLeft, new Vector2(0.01f, 0), new Vector2(0.15f, 1));
+        tMeta  = Label(bar, "Meta R$ 0", 18, GameConfig.Paper, TextAnchor.MiddleLeft, new Vector2(0.15f, 0), new Vector2(0.30f, 1));
+        tDay   = Label(bar, "Nível 1 · Dia 1", 20, GameConfig.Paper, TextAnchor.MiddleCenter, new Vector2(0.29f, 0), new Vector2(0.47f, 1));
+        Label(bar, "Reputação", 14, GameConfig.Paper, TextAnchor.MiddleLeft, new Vector2(0.47f, 0.55f), new Vector2(0.66f, 1));
+        var repBg = Panel(bar, new Vector2(0.47f, 0.18f), new Vector2(0.66f, 0.5f), new Color(0, 0, 0, 0.4f));
         repBar = Panel(repBg, Vector2.zero, new Vector2(0.7f, 1), GameConfig.Good).GetComponent<Image>();
-        Label(bar, "Tempo do dia", 16, GameConfig.Paper, TextAnchor.MiddleLeft, new Vector2(0.64f, 0.55f), new Vector2(0.86f, 1));
-        var tBg = Panel(bar, new Vector2(0.64f, 0.18f), new Vector2(0.86f, 0.5f), new Color(0, 0, 0, 0.4f));
+        Label(bar, "Tempo do dia", 14, GameConfig.Paper, TextAnchor.MiddleLeft, new Vector2(0.67f, 0.55f), new Vector2(0.85f, 1));
+        var tBg = Panel(bar, new Vector2(0.67f, 0.18f), new Vector2(0.85f, 0.5f), new Color(0, 0, 0, 0.4f));
         timeBar = Panel(tBg, Vector2.zero, new Vector2(0f, 1), GameConfig.Gold).GetComponent<Image>();
-        tCust  = Label(bar, "Clientes: 0", 20, GameConfig.Paper, TextAnchor.MiddleRight, new Vector2(0.86f, 0), new Vector2(0.99f, 1));
-        tHint = Label(rt, "WASD/setas: andar  ·  E/Espaço: atender / repor / comprar", 18, new Color(1,1,1,0.85f), TextAnchor.LowerCenter, new Vector2(0,0), new Vector2(1,0.06f));
+        tCust  = Label(bar, "Clientes: 0", 18, GameConfig.Paper, TextAnchor.MiddleRight, new Vector2(0.85f, 0), new Vector2(0.99f, 1));
+        Label(rt, "WASD/setas: andar  ·  E/Espaço: atender / repor / comprar", 18, new Color(1,1,1,0.85f), TextAnchor.LowerCenter, new Vector2(0,0), new Vector2(1,0.06f));
     }
 
-    // ---------- MENU ----------
-    void BuildMenu() {
-        menuRoot = new GameObject("Menu"); var rt = menuRoot.AddComponent<RectTransform>(); rt.SetParent(canvas.transform, false);
-        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
-        // key art de fundo
-        var bgGo = new GameObject("keyart"); var brt = bgGo.AddComponent<RectTransform>(); brt.SetParent(rt, false);
-        brt.anchorMin = Vector2.zero; brt.anchorMax = Vector2.one; brt.offsetMin = Vector2.zero; brt.offsetMax = Vector2.zero;
-        var bim = bgGo.AddComponent<Image>(); bim.color = new Color(0.5f,0.42f,0.32f);
-        if (AssetDB.I != null && AssetDB.I.keyart) { bim.sprite = AssetDB.I.keyart; bim.color = Color.white; bim.preserveAspect = false; }
-        Panel(rt, Vector2.zero, Vector2.one, new Color(0.08f, 0.05f, 0.03f, 0.25f)); // leve escurecida
-        Label(rt, "TUDO TEM PREÇO", 64, GameConfig.Gold, TextAnchor.UpperCenter, new Vector2(0, 0.70f), new Vector2(1, 0.92f));
-        Label(rt, "Mercado Final — gerencie sua lojinha", 24, GameConfig.Paper, TextAnchor.UpperCenter, new Vector2(0, 0.63f), new Vector2(1, 0.72f));
-        Btn(rt, "INICIAR", new Vector2(0.36f, 0.40f), new Vector2(0.64f, 0.50f), GameConfig.Gold, () => GameManager.I.NewGame());
-        Btn(rt, "COMO JOGAR", new Vector2(0.36f, 0.28f), new Vector2(0.64f, 0.37f), GameConfig.Paper, () => OnScreen(Screen.Tutorial));
-        Label(rt, "Pedro · Gabriel · Andrey · Rayane", 16, new Color(1,1,1,0.7f), TextAnchor.LowerCenter, new Vector2(0,0.01f), new Vector2(1,0.06f));
-    }
-
-    void BuildTutorial() {
-        tutoRoot = FullPanel("Tutorial", new Color(0.10f,0.07f,0.05f,0.95f)).gameObject;
-        Label(tutoRoot.transform, "COMO JOGAR", 44, GameConfig.Gold, TextAnchor.UpperCenter, new Vector2(0,0.84f), new Vector2(1,0.95f));
-        string txt =
-            "• Ande pelo mercado com WASD / setas.\n" +
-            "• Clientes entram querendo um produto (veja o balão).\n" +
-            "• Vá até o cliente e aperte E/Espaço para ATENDER (precisa do produto na prateleira).\n" +
-            "• Aperte E perto de uma PRATELEIRA para REPOR do estoque.\n" +
-            "• Aperte E perto do FUNDO (caixas) para COMPRAR de fornecedores.\n" +
-            "• Produtos vencem! Reponha e venda antes do prazo.\n" +
-            "• Cada dia tem despesas. Não deixe o dinheiro zerar.\n" +
-            "• Eventos morais aparecem: cada escolha mexe em dinheiro e reputação.\n\n" +
-            "Meta: chegar a R$ " + GameConfig.GoalMoney.ToString("0") + " sem perder a reputação.";
-        Label(tutoRoot.transform, txt, 22, GameConfig.Paper, TextAnchor.UpperLeft, new Vector2(0.12f,0.22f), new Vector2(0.88f,0.82f));
-        Btn(tutoRoot.transform, "VOLTAR", new Vector2(0.38f,0.08f), new Vector2(0.62f,0.17f), GameConfig.Paper, () => OnScreen(Screen.Menu));
-    }
-
-    RectTransform FullPanel(string name, Color col) {
-        var go = new GameObject(name); var rt = go.AddComponent<RectTransform>(); rt.SetParent(canvas.transform, false);
-        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
-        go.AddComponent<Image>().color = col; return rt;
-    }
-
-    // ---------- FIM DE DIA ----------
+    // ---------- FIM DE DIA (continua no mesmo nível) ----------
     void BuildDayEnd() {
         dayendRoot = FullPanel("DayEnd", new Color(0.10f,0.07f,0.05f,0.92f)).gameObject;
         Label(dayendRoot.transform, "FIM DO DIA", 48, GameConfig.Gold, TextAnchor.UpperCenter, new Vector2(0,0.80f), new Vector2(1,0.92f));
-        tDayReport = Label(dayendRoot.transform, "", 26, GameConfig.Paper, TextAnchor.UpperCenter, new Vector2(0.15f,0.30f), new Vector2(0.85f,0.78f));
-        Btn(dayendRoot.transform, "PRÓXIMO DIA", new Vector2(0.34f,0.12f), new Vector2(0.66f,0.23f), GameConfig.Gold, () => GameManager.I.NextDay());
+        tDayReport = Label(dayendRoot.transform, "", 26, GameConfig.Paper, TextAnchor.UpperCenter, new Vector2(0.15f,0.28f), new Vector2(0.85f,0.78f));
+        Btn(dayendRoot.transform, "PRÓXIMO DIA", new Vector2(0.34f,0.12f), new Vector2(0.66f,0.23f), GameConfig.Gold,
+            () => { dayendRoot.SetActive(false); GameManager.I.NextDay(); });
     }
 
-    void BuildGameOver() {
-        gameoverRoot = FullPanel("GameOver", new Color(0.18f,0.05f,0.04f,0.95f)).gameObject;
-        Label(gameoverRoot.transform, "MERCADO FECHADO", 52, GameConfig.Bad, TextAnchor.UpperCenter, new Vector2(0,0.74f), new Vector2(1,0.9f));
-        tGOstats = Label(gameoverRoot.transform, "", 26, GameConfig.Paper, TextAnchor.UpperCenter, new Vector2(0.15f,0.4f), new Vector2(0.85f,0.72f));
-        Btn(gameoverRoot.transform, "JOGAR DE NOVO", new Vector2(0.34f,0.22f), new Vector2(0.66f,0.32f), GameConfig.Gold, () => GameManager.I.NewGame());
-        Btn(gameoverRoot.transform, "MENU", new Vector2(0.40f,0.10f), new Vector2(0.60f,0.19f), GameConfig.Paper, () => GameManager.I.BackToMenu());
+    public void ShowDayReport(int day, int level, float meta, int served, int lost, float sales, float tips, float expense, int expired, float money) {
+        float lucro = sales + tips - expense;
+        tDayReport.text =
+            "Nível " + level + " · Dia " + day + " encerrado\n\n" +
+            "Vendas: R$ " + sales.ToString("0.0") + "    Gorjetas: R$ " + tips.ToString("0.0") + "\n" +
+            "Despesas: -R$ " + expense.ToString("0.0") +
+            (expired > 0 ? "    Vencidos: " + expired : "") + "\n" +
+            "Lucro do dia: " + (lucro >= 0 ? "+" : "") + "R$ " + lucro.ToString("0.0") + "\n\n" +
+            "Caixa: R$ " + money.ToString("0") + "   ·   Meta do nível: R$ " + meta.ToString("0") + "\n" +
+            "Faltam R$ " + Mathf.Max(0, meta - money).ToString("0") + " para passar de nível!";
+        dayendRoot.SetActive(true); dayendRoot.transform.SetAsLastSibling();
     }
 
-    void BuildVictory() {
-        victoryRoot = FullPanel("Victory", new Color(0.05f,0.14f,0.07f,0.95f)).gameObject;
-        Label(victoryRoot.transform, "VOCÊ VENCEU!", 56, GameConfig.Gold, TextAnchor.UpperCenter, new Vector2(0,0.72f), new Vector2(1,0.9f));
-        tVICstats = Label(victoryRoot.transform, "", 26, GameConfig.Paper, TextAnchor.UpperCenter, new Vector2(0.15f,0.4f), new Vector2(0.85f,0.7f));
-        Btn(victoryRoot.transform, "JOGAR DE NOVO", new Vector2(0.34f,0.22f), new Vector2(0.66f,0.32f), GameConfig.Gold, () => GameManager.I.NewGame());
-        Btn(victoryRoot.transform, "MENU", new Vector2(0.40f,0.10f), new Vector2(0.60f,0.19f), GameConfig.Paper, () => GameManager.I.BackToMenu());
+    // ---------- NÍVEL CONCLUÍDO (vai pra próxima cena) ----------
+    void BuildLevelClear() {
+        levelRoot = FullPanel("LevelClear", new Color(0.05f,0.12f,0.06f,0.95f)).gameObject;
+        Label(levelRoot.transform, "NÍVEL CONCLUÍDO!", 50, GameConfig.Gold, TextAnchor.UpperCenter, new Vector2(0,0.74f), new Vector2(1,0.9f));
+        tLevelReport = Label(levelRoot.transform, "", 28, GameConfig.Paper, TextAnchor.UpperCenter, new Vector2(0.12f,0.36f), new Vector2(0.88f,0.72f));
+        Btn(levelRoot.transform, "PRÓXIMO NÍVEL ▶", new Vector2(0.32f,0.16f), new Vector2(0.68f,0.27f), GameConfig.Gold,
+            () => { levelRoot.SetActive(false); onNivelNext?.Invoke(); });
+    }
+
+    public void ShowLevelClear(int level, float meta, float money, float rep, System.Action next) {
+        onNivelNext = next;
+        tLevelReport.text =
+            "Você bateu a meta de R$ " + meta.ToString("0") + " do Nível " + level + "!\n\n" +
+            "Caixa: R$ " + money.ToString("0") + "   ·   Reputação: " + rep.ToString("0") + "\n\n" +
+            "Prepare-se: o Nível " + (level + 1) + " é mais difícil.\n" +
+            "Seu dinheiro e estoque continuam com você.";
+        levelRoot.SetActive(true); levelRoot.transform.SetAsLastSibling();
     }
 
     // ---------- EVENTO MORAL ----------
@@ -208,47 +193,14 @@ public class UI : MonoBehaviour {
         }
     }
 
-    // ---------- TROCA DE TELA ----------
-    public void OnScreen(Screen s) {
-        if (menuRoot) menuRoot.SetActive(s == Screen.Menu);
-        if (tutoRoot) tutoRoot.SetActive(s == Screen.Tutorial);
-        if (hudRoot) hudRoot.SetActive(s == Screen.Playing);
-        if (dayendRoot) dayendRoot.SetActive(s == Screen.DayEnd);
-        if (gameoverRoot) gameoverRoot.SetActive(s == Screen.GameOver);
-        if (victoryRoot) victoryRoot.SetActive(s == Screen.Victory);
-        if (eventRoot) eventRoot.SetActive(false);
-        if (buyRoot) buyRoot.SetActive(false);
-        modal = false;
-        if (s == Screen.GameOver && tGOstats) tGOstats.text = StatsText();
-        if (s == Screen.Victory && tVICstats) tVICstats.text = StatsText();
-    }
-
-    string StatsText() {
-        var g = GameManager.I;
-        return "Dias sobrevividos: " + g.daysSurvived + "\nDinheiro final: R$ " + g.money.ToString("0") +
-               "\nReputação: " + g.rep.ToString("0") + "\nClientes atendidos: " + g.servedTotal +
-               "\nClientes perdidos: " + g.lostTotal;
-    }
-
-    public void ShowDayReport(int day, int served, int lost, float sales, float tips, float expense, int expired) {
-        float lucro = sales + tips - expense;
-        tDayReport.text =
-            "Dia " + day + " encerrado\n\n" +
-            "Vendas: R$ " + sales.ToString("0.0") + "\n" +
-            "Gorjetas: R$ " + tips.ToString("0.0") + "\n" +
-            "Despesas: -R$ " + expense.ToString("0.0") + "\n" +
-            (expired > 0 ? "Vencidos: " + expired + " (reputação caiu)\n" : "") +
-            "\nLucro do dia: " + (lucro >= 0 ? "+" : "") + "R$ " + lucro.ToString("0.0") + "\n\n" +
-            "Caixa: R$ " + GameManager.I.money.ToString("0") + "  ·  Reputação: " + GameManager.I.rep.ToString("0") +
-            "\nMeta: R$ " + GameConfig.GoalMoney.ToString("0");
-    }
-
     // ---------- HUD update ----------
     public void UpdateHUD() {
         var g = GameManager.I;
+        float meta = GameConfig.MetaDoNivel(g.level);
         if (tMoney) tMoney.text = "R$ " + g.money.ToString("0");
-        if (tDay) tDay.text = "Dia " + g.day;
-        if (tCust) tCust.text = "Clientes: " + g.customers.Count + "/" + (g.day > 0 ? (GameConfig.CustomersBase + (g.day-1)*GameConfig.CustomersPerDay) : 0);
+        if (tMeta) tMeta.text = "Meta R$ " + meta.ToString("0");
+        if (tDay) tDay.text = "Nível " + g.level + " · Dia " + g.day;
+        if (tCust) tCust.text = "Clientes: " + g.customers.Count;
         if (repBar) { float f = g.rep / 100f; repBar.rectTransform.anchorMax = new Vector2(f, 1); repBar.color = f > 0.5f ? GameConfig.Good : (f > 0.25f ? GameConfig.Warn : GameConfig.Bad); }
         if (timeBar) { float f = Mathf.Clamp01(g.dayTime / g.dayLen); timeBar.rectTransform.anchorMax = new Vector2(f, 1); }
     }

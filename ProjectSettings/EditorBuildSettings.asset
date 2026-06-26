@@ -6,7 +6,22 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/MercadoFinal.unity
-    guid: 01b3d195bfe434d06b4e205ef3353d97
+    path: Assets/Scenes/Menu.unity
+    guid: 82d2bd64b083e4594a6fcb4c202c84a9
+  - enabled: 1
+    path: Assets/Scenes/ComoJogar.unity
+    guid: 4837dc29b793f42c5b8090b9f31a12af
+  - enabled: 1
+    path: Assets/Scenes/Nivel1.unity
+    guid: 540e12c1f06044a008c63a60b3da1777
+  - enabled: 1
+    path: Assets/Scenes/Nivel2.unity
+    guid: d9c5b71ce31d243768e9d490c4b5c6d6
+  - enabled: 1
+    path: Assets/Scenes/Nivel3.unity
+    guid: e19c40fe19571493f8169b5e602980e6
+  - enabled: 1
+    path: Assets/Scenes/Fim.unity
+    guid: 657bf3b496c414faba092bd04ff6a948
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

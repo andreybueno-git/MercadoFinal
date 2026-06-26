@@ -66,8 +66,17 @@ public static class GameConfig {
     // ---- Balance ----
     public const float StartMoney = 220f;
     public const float StartRep = 70f;        // 0..100
-    public const float GoalMoney = 900f;       // meta de vitória
+    public const float GoalMoney = 900f;       // meta de vitória (legado)
     public const float RepGameOver = 8f;       // reputação mínima
+
+    // ---- níveis (3 cenas jogáveis) ----
+    public const int MaxLevel = 3;
+    // meta de dinheiro pra passar de cada nível (o dinheiro acumula entre os níveis)
+    public static float MetaDoNivel(int level) {
+        if (level <= 1) return 320f;
+        if (level == 2) return 480f;
+        return 640f;                            // nível 3: bater isto = VITÓRIA
+    }
     public const float DailyExpenseBase = 40f;
     public const float DailyExpenseGrow = 12f;
     public const int ShelfCapacity = 8;
