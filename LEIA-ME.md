@@ -64,4 +64,4 @@ quando você usa o menu "Criar Cena do Jogo".)
   o fatiamento — é só pedir.
 - A **trilha de crise** (bgm_crise) é opcional: se não existir, toca a música ambiente.
 
-Créditos: Pedro Henrique A. Ferreira · Gabriel Miranda · Andrey Bueno Isoton · Rayane Araújo Teles.
+Créditos: Pedro Henrique Araújo Ferreira · Gabriel Silva de Miranda · Rayane Araújo Teles · Andrey Bueno Isoton.

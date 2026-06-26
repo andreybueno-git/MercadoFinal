@@ -121,7 +121,7 @@ public static class SetupTool {
         EdText(rt, "Mercado Final — gerencie sua lojinha", 24, GameConfig.Paper, TextAnchor.UpperCenter, new Vector2(0, 0.63f), new Vector2(1, 0.72f));
         var bIni = EdButton(rt, "INICIAR", new Vector2(0.36f, 0.40f), new Vector2(0.64f, 0.50f), GameConfig.Gold);
         var bCJ  = EdButton(rt, "COMO JOGAR", new Vector2(0.36f, 0.28f), new Vector2(0.64f, 0.37f), GameConfig.Paper);
-        EdText(rt, "Pedro · Gabriel · Andrey · Rayane", 16, new Color(1, 1, 1, 0.7f), TextAnchor.LowerCenter, new Vector2(0, 0.01f), new Vector2(1, 0.06f));
+        EdText(rt, "Pedro Henrique Araújo Ferreira · Gabriel Silva de Miranda · Rayane Araújo Teles · Andrey Bueno Isoton", 16, new Color(1, 1, 1, 0.7f), TextAnchor.LowerCenter, new Vector2(0, 0.01f), new Vector2(1, 0.06f));
         UnityEventTools.AddPersistentListener(bIni.onClick, new UnityAction(ctrl.Iniciar));
         UnityEventTools.AddPersistentListener(bCJ.onClick, new UnityAction(ctrl.AbrirComoJogar));
         return Save("Menu", scene);

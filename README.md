@@ -37,10 +37,10 @@ WASD/setas para andar · **E** ou **Espaço** para atender cliente / repor prate
 
 ## 👥 Equipe
 
-- **Pedro Henrique A. Ferreira**
-- **Gabriel Miranda**
-- **Andrey Bueno Isoton**
+- **Pedro Henrique Araújo Ferreira**
+- **Gabriel Silva de Miranda**
 - **Rayane Araújo Teles**
+- **Andrey Bueno Isoton**
 
 ## 🎨 Direitos dos autores / créditos de assets
 
